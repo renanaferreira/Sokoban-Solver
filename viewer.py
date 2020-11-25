@@ -23,7 +23,19 @@ logger.setLevel(logging.DEBUG)
 
 MAP_X_INCREASE = 4
 MAP_Y_INCREASE = 2
- 
+
+RIGHT_INFO_MARGIN_TOP = 30
+RIGHT_INFO_MARGIN_RIGHT = 30
+RIGHT_INFO_SPACE_BETWEEN_COLS = 5
+
+SCORE_INFO = {
+    "level": "Level",
+    "score": "Score",
+    "total_moves": "Moves",
+    "total_pushes": "Pushes",
+    "total_steps": "Steps"
+}
+
 KEEPER = {
     "up": (3 * 64, 4 * 64),
     "left": (3 * 64, 6 * 64),
@@ -51,6 +63,7 @@ COLORS = {
     "orange": (255, 165, 0),
     "yellow": (255, 255, 0),
     "grey": (120, 120, 120),
+    "light_blue": (58, 240, 240),
 }
 SPRITES = None
 SCREEN = None
@@ -146,23 +159,28 @@ def draw_background(mapa):
     for x in range(map_x+MAP_X_INCREASE):
         if x == map_x+1:
             separator = False
-
         for y in range(map_y+MAP_Y_INCREASE):
             wx, wy = scale((x, y))
             if x < map_x and y < map_y:
-                background.blit(SPRITES, (wx, wy), (*PASSAGE, *scale((1, 1))))
+                background_sprite = sprite = PASSAGE
                 if mapa.get_tile((x, y)) == Tiles.WALL:
-                    background.blit(SPRITES, (wx, wy), (*WALL, *scale((1, 1))))
+                    sprite = WALL
                 if mapa.get_tile((x, y)) in [Tiles.GOAL, Tiles.BOX_ON_GOAL, Tiles.MAN_ON_GOAL]:
-                    background.blit(SPRITES, (wx, wy), (*GOAL, *scale((1, 1))))
+                    sprite = GOAL
             else:
+                background_sprite = GRAY_PASSAGE
                 if y > map_y:
-                    background.blit(SPRITES, (wx,wy), (*GRAY_PASSAGE, *scale((1, 1))))  
+                    sprite = GRAY_PASSAGE
                 else:
                     if separator or y == map_y:
-                        background.blit(SPRITES, (wx,wy), (*BLACK_SURFACE, *scale((1, 1))))  
+                        sprite = BLACK_SURFACE
                     else:
-                        background.blit(SPRITES, (wx,wy), (*GREEN_PASSAGE, *scale((1, 1))))
+                        sprite = GREEN_PASSAGE
+            
+            # needed to fill the background of sprites with transparency
+            background.blit(SPRITES, (wx, wy), (*background_sprite, *scale((1, 1))))
+
+            background.blit(SPRITES, (wx, wy), (*sprite, *scale((1, 1))))
     return background
 
 
@@ -186,6 +204,10 @@ def draw_info(surface, text, pos, color=(0, 0, 0), background=None, size=24):
     surface.blit(textsurface, pos)
     return textsurface.get_width(), textsurface.get_height()
 
+# get size of draw without drawing it
+def get_draw_size(text):
+    textsurface = pygame.font.Font(None, int(24 / SCALE)).render(text, True, (0,0,0))
+    return textsurface.get_width(), textsurface.get_height()
 
 async def main_loop(queue):
     """Processes events from server and display's."""
@@ -221,15 +243,11 @@ async def main_loop(queue):
 
     new_event = True
 
-    margin_top = 30
-    margin_right = 30
-    space_between_cols = 5
-
     last_player = state['player']
 
     data_index = ["level", "timestamp", "", "score", "total_moves", "total_pushes", "total_steps"]
-    hs = ""
-    best_entry = ""
+    hs = HighScoresFetch(name=state['player'])
+    best_entry = None
 
     while True:
         if "player" in state:
@@ -245,74 +263,46 @@ async def main_loop(queue):
         
         if "score" in state and "player" in state:
             if last_player != curr_player:
-                print("here")
                 hs = HighScoresFetch(name=state['player'])
                 last_player = curr_player
-
                 best_entry = hs.get_best_entry(type="max", key="score")
 
             player = state['player']
             
-            player_h = SCREEN.get_height() - 40
-            player_w, _ = draw_info(SCREEN, player, (-4000, player_h))
-            draw_info(SCREEN, player, (SCREEN.get_width()-player_w-margin_right, player_h), (58, 240, 240))
-            player_title_w, _ = draw_info(SCREEN, "Player: ", (-4000, player_h))
-            draw_info(SCREEN, "Player: ", (SCREEN.get_width()-player_w-player_title_w-margin_right-space_between_cols, player_h), (255, 255, 255))
+            player_h_from_top = SCREEN.get_height() - 40
+            player_w, _ = get_draw_size(player)
+            draw_info(SCREEN, player, (SCREEN.get_width()-player_w-RIGHT_INFO_MARGIN_RIGHT, player_h_from_top), COLORS["light_blue"])
+            draw_info(SCREEN, "Player: ", (SCREEN.get_width()-player_w-get_draw_size("Player: ")[0]-RIGHT_INFO_MARGIN_RIGHT-RIGHT_INFO_SPACE_BETWEEN_COLS, player_h_from_top), COLORS["white"])
 
-            if hs != "" and hs.data != []:
-                bestround_pos = margin_top
-                bestround_w, _ = draw_info(SCREEN, "Best Round", (-4000, bestround_pos))
-                draw_info(SCREEN, "Best Round", (SCREEN.get_width()-bestround_w-margin_right-22, bestround_pos), (255, 242, 0))
+            if hs != None and hs.data != []:
+                draw_info(SCREEN, "Best Round", (SCREEN.get_width()-get_draw_size("Best Round")[0]-RIGHT_INFO_MARGIN_RIGHT-22, RIGHT_INFO_MARGIN_TOP), COLORS["yellow"])
 
-                info_pos = bestround_pos + 35
-
-                splitted = best_entry['timestamp'].split("T")
-                info_w, _ = draw_info(SCREEN, splitted[0], (-4000, 0))
-                title_info_w, _ = draw_info(SCREEN, "Data: ", (-4000, 0))
-                title_fixed_size = info_w+title_info_w+margin_right+space_between_cols
+                info_pos = RIGHT_INFO_MARGIN_TOP + 35
+                title_fixed_size = get_draw_size(best_entry['timestamp'].split("T")[0])[0]+get_draw_size("Data: ")[0]+RIGHT_INFO_MARGIN_RIGHT+RIGHT_INFO_SPACE_BETWEEN_COLS
                 
                 for i, info in enumerate(data_index):
-                    curr_data_index = data_index[i]
-
-                    if curr_data_index == "":
+                    if info == "":
                         continue
                     else:
                         content = best_entry[info]
 
-                    if curr_data_index == "timestamp":
+                    if info == "timestamp":
                         splitted = content.split("T")
-                        
-                        info_w, _ = draw_info(SCREEN, splitted[0], (-4000, info_pos+i*20))
-                        draw_info(SCREEN, splitted[0], (SCREEN.get_width()-info_w-margin_right, info_pos+i*20), (255, 255, 255))
-                        title_info_w, _ = draw_info(SCREEN, "Data: ", (-4000, info_pos+i*20))
+                        draw_info(SCREEN, splitted[0], (SCREEN.get_width()-get_draw_size(splitted[0])[0]-RIGHT_INFO_MARGIN_RIGHT, info_pos+i*20), COLORS["white"])
                         draw_info(SCREEN, "Data: ", (SCREEN.get_width()-title_fixed_size, info_pos+i*20))
-                        info_w, _ = draw_info(SCREEN, splitted[1], (-4000, info_pos+i*20))
-                        draw_info(SCREEN, splitted[1], (SCREEN.get_width()-info_w-margin_right, info_pos+(i+1)*20), (255, 255, 255))
-                        continue
+                        draw_info(SCREEN, splitted[1], (SCREEN.get_width()-get_draw_size(splitted[1])[0]-RIGHT_INFO_MARGIN_RIGHT, info_pos+(i+1)*20), COLORS["white"])
+                        continue              
 
-                    if curr_data_index == "total_moves":
-                        curr_data_index = "moves"
-
-                    if curr_data_index == "total_pushes":
-                        curr_data_index = "pushes"
-
-                    if curr_data_index == "total_steps":
-                        curr_data_index = "steps"                    
-
-                    info_w, _ = draw_info(SCREEN, str(content), (-4000, info_pos+i*20))
-                    draw_info(SCREEN, str(content), (SCREEN.get_width()-info_w-margin_right, info_pos+i*20), (255, 255, 255))
-                    title_info_w, _ = draw_info(SCREEN, format_string(curr_data_index)+": ", (-4000, info_pos+i*20))
-                    draw_info(SCREEN, format_string(curr_data_index)+": ", (SCREEN.get_width()-title_fixed_size, info_pos+i*20))
+                    draw_info(SCREEN, str(content), (SCREEN.get_width()-get_draw_size(str(content))[0]-RIGHT_INFO_MARGIN_RIGHT, info_pos+i*20), COLORS["white"])
+                    draw_info(SCREEN, SCORE_INFO[info]+": ", (SCREEN.get_width()-title_fixed_size, info_pos+i*20))
 
                 curr_round_pos = 230
-                curr_round_w, _ = draw_info(SCREEN, "Current Round", (-4000, curr_round_pos))
-                draw_info(SCREEN, "Current Round", (SCREEN.get_width()-curr_round_w-margin_right-10, curr_round_pos), (255, 0, 0))
+                draw_info(SCREEN, "Current Round", (SCREEN.get_width()-get_draw_size("Current Round")[0]-RIGHT_INFO_MARGIN_RIGHT-10, curr_round_pos), COLORS["red"])
 
                 info_pos = curr_round_pos + 35
                 for i, curr_info in enumerate(["Moves", "Pushes", "Steps"]):
-                    info_w, _ = draw_info(SCREEN, str(state['score'][i+1]), (-4000, info_pos+i*20))
-                    draw_info(SCREEN, str(state['score'][i+1]), (SCREEN.get_width()-info_w-margin_right, info_pos+i*20), (255, 255, 255))
-                    title_info_w, _ = draw_info(SCREEN, curr_info+": ", (-4000, info_pos+i*20))
+                    content = state['score'][i+1]
+                    draw_info(SCREEN, str(content), (SCREEN.get_width()-get_draw_size(str(content))[0]-RIGHT_INFO_MARGIN_RIGHT, info_pos+i*20), COLORS["white"])
                     draw_info(SCREEN, curr_info+": ", (SCREEN.get_width()-title_fixed_size, info_pos+i*20))
 
         if "level" in state:
@@ -320,7 +310,7 @@ async def main_loop(queue):
                 SCREEN,
                 f"{state['level']}",
                 (SCREEN.get_width()-162, 335),
-                color=(255, 255, 255), size=50
+                color=COLORS["white"], size=50
             )
 
         if "boxes" in state:
@@ -408,15 +398,6 @@ async def main_loop(queue):
             await asyncio.sleep(1.0 / GAME_SPEED)
             new_event = False
             continue
-
-def format_string(word):
-    final_word = ""
-    for i, c in enumerate(word):
-        if i == 0:
-            final_word+=c.upper()
-        else:
-            final_word+=c
-    return final_word
 
 if __name__ == "__main__":
     SERVER = os.environ.get("SERVER", "localhost")
