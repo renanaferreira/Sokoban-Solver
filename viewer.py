@@ -24,12 +24,15 @@ logger.setLevel(logging.DEBUG)
 MAP_X_INCREASE = 4
 MAP_Y_INCREASE = 2
 
-RIGHT_INFO_MARGIN_TOP = 30
-RIGHT_INFO_MARGIN_RIGHT = 30
-RIGHT_INFO_SPACE_BETWEEN_COLS = 5
+RIGHT_INFO_MARGIN_TOP = 35
+RIGHT_INFO_MARGIN_RIGHT = 25
+RIGHT_INFO_MARGIN_LEFT = 25
+RIGHT_INFO_MARGIN_BOTTOM = 40
 
 DATA_INDEX_BEST_ROUND = ["level", "timestamp", "timestamp2", "score", "total_moves", "total_pushes", "total_steps"]
+BEST_ROUND_TITLE = "Best Round"
 DATA_INDEX_CURR_ROUND = ["Moves", "Pushes", "Steps"]
+CURR_ROUND_TITLE = "Current Round"
 
 SCORE_INFO = {
     "level": "Level",
@@ -217,32 +220,36 @@ def get_draw_size(text):
     return textsurface.get_width(), textsurface.get_height()
 
 # draw a table providing position for top and margin for right
-def draw_table_from_right_top(canvas, col_l_info, col_r_info, title_info, max_width, positions):
+def draw_table_right_top(canvas, area_width, col_l_info, col_r_info, title_info, max_width, positions):
     col_l, col_l_color = col_l_info
     col_r, col_r_color = col_r_info
     title, title_color = title_info
-    pos_top, margin_right = positions
+    margin_left, pos_top, margin_right = positions
     canvas_width = canvas.get_width()
-
-    # find place for title
     title_width, title_height = get_draw_size(title)
-    title_margin = (max_width-margin_right-title_width)/2
-    title_pos = title_width+title_margin+margin_right
 
     # draw title of table
-    draw_info(canvas, title, (canvas_width-title_pos, pos_top), title_color)
+    draw_info(canvas, title, (canvas_width-center_text_margin(area_width, title_width), pos_top), title_color)
 
-    content_initial_height = pos_top+title_height+20
+    current_height = initial_height = pos_top+title_height+20
     for i, col in enumerate(col_l):
-        curr_height = content_initial_height+i*20
+        current_height = initial_height + i*20
         col_r_content = col_r[i]
         
-        # draw left side of column
-        draw_info(canvas, col, (canvas_width-max_width, curr_height), col_l_color)
+        # draw left side of column positioned within the area_width with a margin on the left
+        draw_info(canvas, col, (canvas_width-area_width+margin_left, current_height), col_l_color)
 
-        # draw right side of colum
-        draw_info(canvas, col_r_content, (canvas_width-get_draw_size(col_r_content)[0]-margin_right, curr_height), col_r_color)
+        # draw right side of colum positioned within the area_width with a margin on the right
+        draw_info(canvas, col_r_content, (canvas_width-get_draw_size(col_r_content)[0]-margin_right, current_height), col_r_color)
 
+    return current_height
+
+def get_largest_width_for_table(col1, col2, title):
+    return max([get_draw_size(max(col1, key=lambda s:len(s)))[0]+get_draw_size(max(col2, key=lambda s:len(s)))[0]]+[get_draw_size(title)[0]])
+
+def center_text_margin(canvas_width, text_width):
+    return (canvas_width-text_width)/2+text_width
+    
 
 async def main_loop(queue):
     """Processes events from server and display's."""
@@ -294,60 +301,70 @@ async def main_loop(queue):
 
         main_group.clear(SCREEN, clear_callback)
         boxes_group.clear(SCREEN, clear_callback)
-        
+
+        # size of each square
+        map_square_size = (SCREEN.get_width()/(map_x+MAP_X_INCREASE), SCREEN.get_height()/(map_y+MAP_Y_INCREASE))
+        # width of extra space added to the map, except the separating black wall
+        extra_available_space_width = map_square_size[0]*(MAP_X_INCREASE-1)
+
         if "score" in state and "player" in state:
             if last_player != curr_player:
                 hs = HighScoresFetch(name=state['player'])
+
                 if hs.data != []:
                     best_entry = hs.get_best_entry(type="max", key="score")
 
                     split_timestamp = best_entry["timestamp"].split("T")
-                    fixed_width = get_draw_size(split_timestamp[0])[0]+get_draw_size("Data: ")[0]+RIGHT_INFO_MARGIN_RIGHT+RIGHT_INFO_SPACE_BETWEEN_COLS
                     
                     # adjust best_entry dict
                     best_entry["timestamp"] = split_timestamp[0]
                     best_entry["timestamp2"] = split_timestamp[1]
+
+                    formated_col_l, formated_col_r = [SCORE_INFO[d] for d in DATA_INDEX_BEST_ROUND], [str(best_entry[info]) for info in DATA_INDEX_BEST_ROUND]
+                    fixed_width = get_largest_width_for_table(formated_col_l, formated_col_r, BEST_ROUND_TITLE)+RIGHT_INFO_MARGIN_RIGHT
 
                 player = state['player']
 
                 last_player = curr_player
             
             # draw player info
-            player_h_from_top = SCREEN.get_height() - 40
+            player_h_from_top = SCREEN.get_height() - RIGHT_INFO_MARGIN_BOTTOM
             player_w, _ = get_draw_size(player)
             draw_info(SCREEN, player, (SCREEN.get_width()-player_w-RIGHT_INFO_MARGIN_RIGHT, player_h_from_top), COLORS["light_blue"])
-            draw_info(SCREEN, "Player: ", (SCREEN.get_width()-player_w-get_draw_size("Player: ")[0]-RIGHT_INFO_MARGIN_RIGHT-RIGHT_INFO_SPACE_BETWEEN_COLS, player_h_from_top), COLORS["white"])
+            draw_info(SCREEN, "Player: ", (SCREEN.get_width()-player_w-get_draw_size("Player: ")[0]-RIGHT_INFO_MARGIN_RIGHT-5, player_h_from_top), COLORS["white"])
+   
+            current_height = RIGHT_INFO_MARGIN_TOP
 
             if hs != None and hs.data != []:
                 # table for best round
-                draw_table_from_right_top(SCREEN, ([SCORE_INFO[d] for d in DATA_INDEX_BEST_ROUND], COLORS["black"]), ([str(best_entry[info]) for info in DATA_INDEX_BEST_ROUND], COLORS["white"]), ("Best Round", COLORS["yellow"]), fixed_width, (RIGHT_INFO_MARGIN_TOP, RIGHT_INFO_MARGIN_RIGHT))
+                current_height = draw_table_right_top(SCREEN, extra_available_space_width, (formated_col_l, COLORS["black"]), (formated_col_r, COLORS["white"]), (BEST_ROUND_TITLE, COLORS["yellow"]), fixed_width, (RIGHT_INFO_MARGIN_LEFT, current_height, RIGHT_INFO_MARGIN_RIGHT))
             
             # some conditions to coop with state['score']
             if not isinstance(state['score'], int) and len(state['score']) > len(DATA_INDEX_CURR_ROUND):
-                # adapt position of current round table depending if there is a table for best round
-                current_round_pos_top = 230 if hs.data != [] else RIGHT_INFO_MARGIN_TOP
                 curr_round_data_fetch = [str(state['score'][i+1]) for i in range(len(DATA_INDEX_CURR_ROUND))]
-                
+
                 # if there is no data from best round, adapt the fixed size to the data of current round
                 if hs.data == []:
-                    max_key = lambda s:len(s)
-                    fixed_width = get_draw_size(max(curr_round_data_fetch, key=max_key))[0]+get_draw_size(max(DATA_INDEX_CURR_ROUND, key=max_key))[0]+RIGHT_INFO_MARGIN_RIGHT+RIGHT_INFO_SPACE_BETWEEN_COLS
-   
+                    fixed_width = get_largest_width_for_table(curr_round_data_fetch, DATA_INDEX_CURR_ROUND, CURR_ROUND_TITLE)+RIGHT_INFO_MARGIN_RIGHT
+                else:
+                    # if there is best round table, then create a separation with the current round table
+                    current_height+= RIGHT_INFO_MARGIN_TOP
+
                 # table for current round
-                draw_table_from_right_top(SCREEN, (DATA_INDEX_CURR_ROUND, COLORS["black"]), (curr_round_data_fetch, COLORS["white"]), ("Current Round", COLORS["red"]), fixed_width, (current_round_pos_top, RIGHT_INFO_MARGIN_RIGHT))
+                current_height = draw_table_right_top(SCREEN, extra_available_space_width, (DATA_INDEX_CURR_ROUND, COLORS["black"]), (curr_round_data_fetch, COLORS["white"]), (CURR_ROUND_TITLE, COLORS["red"]), fixed_width, (RIGHT_INFO_MARGIN_LEFT, current_height, RIGHT_INFO_MARGIN_RIGHT))
 
         if "level" in state:
-            top_pos = 335 if hs.data != [] else 147
             draw_info(
                 SCREEN,
                 f"{state['level']}",
-                (SCREEN.get_width()-162, top_pos),
+                (SCREEN.get_width()-extra_available_space_width+RIGHT_INFO_MARGIN_LEFT, current_height+RIGHT_INFO_MARGIN_TOP),
                 color=COLORS["white"], size=50
             )
-        else:
+        
+        if "level" not in state and "highscores" not in state:
             for i, word in enumerate(["Run a client  ", "to see scores!"]):
                 word_w, word_h = get_draw_size(word)
-                draw_info(SCREEN, word, (SCREEN.get_width()-word_w-40, RIGHT_INFO_MARGIN_TOP+word_h+i*20), COLORS["white"])
+                draw_info(SCREEN, word, (SCREEN.get_width()-center_text_margin(extra_available_space_width, word_w), RIGHT_INFO_MARGIN_TOP+word_h+i*20), COLORS["white"])
 
         if "boxes" in state:
             boxes_group.empty()
