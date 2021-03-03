@@ -21,7 +21,6 @@ logger_websockets.setLevel(logging.WARN)
 logger = logging.getLogger("Map")
 logger.setLevel(logging.DEBUG)
 
-
 MAP_X_INCREASE = 4
 MAP_Y_INCREASE = 2
 
@@ -56,11 +55,9 @@ BOX_ON_GOAL = (9 * 64, 0)
 GOAL = (12 * 64, 5 * 64)
 WALL = (8 * 64, 6 * 64)
 PASSAGE = (12 * 64, 6 * 64)
-
 GREEN_PASSAGE = (10 * 64, 6 * 64)
 GRAY_PASSAGE = (11 * 64, 6 * 64)
 BLACK_SURFACE = (11 * 64, 0)
-
 
 CHAR_LENGTH = 64
 CHAR_SIZE = CHAR_LENGTH, CHAR_LENGTH
