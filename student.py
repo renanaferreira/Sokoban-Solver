@@ -9,7 +9,6 @@ from tree_search import *
 import mapa
 from sokoban_domain import SokobanDomain
 from consts import Tiles, TILES
-import uteis
 
 class Client:
     def __init__(self):
