@@ -4,7 +4,38 @@ from mapa import Map
 from consts import Tiles, TILES
 import copy
 
-from uteis import *
+def directions():
+    return list("wasd")
+
+def inside_range(pos, size):
+    return pos[0] in range(size[0]) and pos[1] in range(size[1])
+
+#retorna a nova posição a partir de certa ação
+def new_pos(pos, action):
+    cx, cy = pos
+    if   action == "w":
+        return cx, cy - 1
+    elif action == "a":
+        return cx - 1, cy
+    elif action == "s":
+        return cx, cy + 1
+    elif action == "d":
+        return cx + 1, cy
+
+#retorna a posição anterior a certa ação
+def prior_pos(pos, action):
+    cx, cy = pos
+    if   action == "w":
+        return cx, cy + 1
+    elif action == "a":
+        return cx + 1, cy
+    elif action == "s":
+        return cx, cy - 1
+    elif action == "d":
+        return cx - 1, cy
+
+def manhattan_distance(pos1, pos2):
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 class SokobanDomain(SearchDomain):
     def __init__(self, filename):
@@ -236,7 +267,6 @@ class SokobanDomain(SearchDomain):
         else:
             self.visitedkeepers[frozenset(state[1])] = [state[0]]
 
-
         actlist = []
         for box in state[1]:
             for direction in [dir for dir in directions() if self.allowed(state, box, dir)]:
@@ -245,18 +275,15 @@ class SokobanDomain(SearchDomain):
                     actlist += [(box, plan + [direction])]
         return actlist
 
-    def result(self,state,action):
+    def result(self, state, action):
         box, path = action
         return [box, self.get_newboxes(state[1], box, path[-1])]
 
     def cost(self, state, action):
         return len(action[1])
 
-    #https://github.com/stallboy/sokoban/blob/master/solver.py
     def heuristic(self, state, goal):
-        sums = self.greedy_distance(state[1])
-        player = max([min([manhattan_distance(box, state[0]) for box in state[1]]) - 1,0])
-        return sums + player
+        return self.greedy_distance(state[1])
 
     def equivalent(self,state1,state2):
         return (self.sorting(state1[1])==self.sorting(state2[1])) and state1[0] == state2[0]
