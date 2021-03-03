@@ -27,7 +27,6 @@ class GameStatus(IntFlag):
 class Tiles(IntFlag):
     """Tiles bitfield."""
 
-
     FLOOR = 0  # -
     GOAL = 1  # .
     MAN = 2  # @
