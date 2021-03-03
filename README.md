@@ -3,19 +3,6 @@ Sokoban clone for AI teaching
 
 ![Demo](https://github.com/dgomes/iia-ia-sokoban/raw/master/data/sokoban_screenshot.png)
 
-# Update your fork
-Only once
-```
-$ git remote add upstream https://github.com/dgomes/iia-ia-sokoban.git --allow-unrelated-histories
-```
-
-Every now and then:
-```
-$ git fetch upstream
-$ git checkout master
-$ git merge upstream/master
-```
-
 ## How to install
 
 Make sure you are running Python 3.5 or higher

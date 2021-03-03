@@ -96,6 +96,7 @@ class Map:
         """Coordinates of the Keeper."""
         if self._keeper is None:
             self._keeper = self.filter_tiles([Tiles.MAN, Tiles.MAN_ON_GOAL])[0]
+
         return self._keeper
 
     @property
@@ -119,7 +120,10 @@ class Map:
         self._map[y][x] = (
             tile & 0b1110 | self._map[y][x]
         )  # the 0b1110 mask avoid carring ON_GOAL to new tiles
-        if (tile & Tiles.MAN == Tiles.MAN):  # hack to avoid continuous searching for keeper
+
+        if (
+            tile & Tiles.MAN == Tiles.MAN
+        ):  # hack to avoid continuous searching for keeper
             self._keeper = pos
 
     def clear_tile(self, pos):
@@ -131,18 +135,16 @@ class Map:
         """Determine if mobile entity can be placed at pos."""
         x, y = pos
         if x not in range(self.hor_tiles) or y not in range(self.ver_tiles):
-            logger.debug("Position out of map")
+            logger.error("Position out of map")
             return True
         if self._map[y][x] in [Tiles.WALL]:
             logger.debug("Position is a wall")
             return True
         return False
 
+
 if __name__ == "__main__":
-    mapa = Map("levels/1.xsb")
-    print(mapa, "\n")
-    mapa.set_tile((2, 1), Tiles.BOX)
-    assert mapa.get_tile((2, 1)) == Tiles.BOX
+    mapa = Map("levels/2.xsb")
     print(mapa)
     assert mapa.keeper == (11, 8)
     assert mapa.get_tile((4, 2)) == Tiles.WALL

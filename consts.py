@@ -27,13 +27,14 @@ class GameStatus(IntFlag):
 class Tiles(IntFlag):
     """Tiles bitfield."""
 
-    FLOOR       = 0  # -
-    GOAL        = 1  # .
-    MAN         = 2  # @
+
+    FLOOR = 0  # -
+    GOAL = 1  # .
+    MAN = 2  # @
     MAN_ON_GOAL = 3  # +
-    BOX         = 4  # $
+    BOX = 4  # $
     BOX_ON_GOAL = 5  # *
-    WALL        = 8  # #
+    WALL = 8  # #
 
 
 TILES = {

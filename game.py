@@ -16,7 +16,7 @@ GAME_SPEED = 10
 
 def reduce_score(puzzles, moves, pushes, steps, box_on_goal):
     """Convert tuple into 1-dimension score."""
-    return 10000 * puzzles + 1000 * box_on_goal - 100 * pushes - steps
+    return 50000 * puzzles + 5000 * box_on_goal - 100 * pushes - steps
 
 
 class Game:
@@ -129,7 +129,6 @@ class Game:
         # actually update map
         self.map.set_tile(npos, ctile)
         self.map.clear_tile(cur)
-        
         return True
 
     def update_keeper(self):
