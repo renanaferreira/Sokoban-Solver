@@ -164,8 +164,8 @@ class GameServer:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bind", help="IP address to bind to", default="")
-    parser.add_argument("--port", help="TCP port", type=int, default=8001)
-    parser.add_argument("--level", help="start on level", type=int, default=13)
+    parser.add_argument("--port", help="TCP port", type=int, default=8000)
+    parser.add_argument("--level", help="start on level", type=int, default=1)
     parser.add_argument("--seed", help="Seed number", type=int, default=0)
     parser.add_argument(
         "--timeout", help="Timeout after this amount of steps", type=int, default=TIMEOUT

@@ -2,7 +2,6 @@ import asyncio
 import getpass
 import json
 import os
-import random
 import websockets
 from threading import Thread
 from mapa import Map
@@ -13,9 +12,7 @@ from consts import Tiles, TILES
 import uteis
 
 class Client:
-    def __init__(self, addr, name):
-        self.server_address=addr
-        self.agent_name=name
+    def __init__(self):
         self.plan = None
 
     async def agent_loop(self, server_address, agent_name):
@@ -66,8 +63,7 @@ class Client:
 # You can change the default values using the command line, example:
 # $ NAME='arrumador' python3 client.py
 if __name__=="__main__":
-    #"""
-    c=Client("localhost:8001", "ogrande")
+    c=Client()
     loop = asyncio.get_event_loop()
     SERVER = os.environ.get("SERVER", "localhost")
     PORT = os.environ.get("PORT", "8001")
