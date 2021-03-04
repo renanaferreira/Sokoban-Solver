@@ -178,7 +178,6 @@ class SearchTree:
 
             actions = self.problem.domain.actions(node.state)
             if actions == -1:
-                self.visited_nodes.add(self.problem.domain.hash(node.state))
                 continue
 
             for action in actions:

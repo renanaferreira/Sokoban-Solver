@@ -7,7 +7,7 @@ from threading import Thread
 from mapa import Map
 from tree_search import *
 import mapa
-from sokoban_domain import SokobanDomain
+from sokoban_domain import BoxDomain
 from consts import Tiles, TILES
 
 class Client:
@@ -52,7 +52,7 @@ class Client:
         mapa = Map(filename)
         initial = [mapa.keeper, mapa.boxes]
         goal = [None, mapa.filter_tiles([Tiles.MAN_ON_GOAL, Tiles.BOX_ON_GOAL, Tiles.GOAL])]
-        t = SearchTree(SearchProblem(SokobanDomain(filename), initial, goal), "greedy")
+        t = SearchTree(SearchProblem(BoxDomain(filename), initial, goal), "greedy")
 
         t.search()
         self.plan = [idx for path in [idx[1] for idx in t.plan] for idx in path]

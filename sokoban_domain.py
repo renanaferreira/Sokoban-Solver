@@ -37,7 +37,7 @@ def prior_pos(pos, action):
 def manhattan_distance(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
-class SokobanDomain(SearchDomain):
+class BoxDomain(SearchDomain):
     def __init__(self, filename):
         self.count = 0
 
@@ -120,7 +120,9 @@ class SokobanDomain(SearchDomain):
         '''
         obstacles  = self.get_other_boxes(boxes, box) + walls
         newbox = new_pos(box, direction)
-        return inside_range(newbox, self.size) and (newbox not in obstacles + self.simpledeadlocks) and (prior_pos(box, direction) not in obstacles)
+        return inside_range(newbox, self.size) and (
+            newbox not in obstacles + self.simpledeadlocks) and (
+            prior_pos(box, direction) not in obstacles)
 
     def keeper_plan(self, boxes, initial, goal):
         '''
@@ -139,13 +141,6 @@ class SokobanDomain(SearchDomain):
         return None
 
     def freeze_deadlock_detection(self, boxes, walls, box):
-        '''
-        @param boxes, the other boxes in the state removed the box
-        @param walls, the considered walls in a certain context
-        @param box, the box being analysed if generates a freeze deadlock
-        Function that anlyses if a certain box can create a deadlock
-        return True if it can, False otherwise
-        '''
         if len([dir for dir in directions() if self.is_movable(boxes, walls, box, dir)]) == 0:
             countbox      = 0
             countdeadlock = 0
@@ -187,16 +182,10 @@ class SokobanDomain(SearchDomain):
         return False
 
     def visitable(self, state):
-        '''
-        @param state: the search state
-        Analyses if the current state can be reached from a previous visited state, 
-        which makes this state expansion irrelevant.
-        returns True if it can be visited from a previous visited state, False otherwise
-        '''
         key = frozenset(state[1])
         if key in self.visitedkeepers:
-            for visitedplayer in self.visitedkeepers[key]:
-                plan = self.keeper_plan(state[1], state[0], visitedplayer)
+            for visitedpos in self.visitedkeepers[key]:
+                plan = self.keeper_plan(state[1], state[0], visitedpos)
                 if not plan is None:
                     return True
         return False
@@ -224,7 +213,8 @@ class SokobanDomain(SearchDomain):
         return sorted(boxes, key=lambda pos: (pos[0], pos[1]))
 
     def greedy_distance(self, boxes, infinite=100000000):
-        edges = sorted([((goal, box), self.distanceToGoal[goal][box]) for box in boxes for goal in self.goals], key=lambda p: p[1])
+        edges = sorted([((goal, box), self.distanceToGoal[goal][box]) 
+            for box in boxes for goal in self.goals], key=lambda p: p[1])
         for idx in range(len(edges)):
             edge = edges[idx]
             if edge[1] == float('inf'):
@@ -245,16 +235,14 @@ class SokobanDomain(SearchDomain):
             if box not in matchedBoxes:
                 closestgoal = None
                 for goal in [goal for goal in self.goals if goal not in matchedGoals]:
-                    if (box in self.distanceToGoal[goal]) and (closestgoal is None or self.distanceToGoal[goal][box] < self.distanceToGoal[closestgoal][box]):
+                    if (box in self.distanceToGoal[goal]) and (
+                        closestgoal is None or self.distanceToGoal[goal][box] < self.distanceToGoal[closestgoal][box]):
                         closestgoal = goal
                 matches += [((closestgoal, box), self.distanceToGoal[closestgoal][box])]
                 matchedBoxes.add(box)
                 matchedGoals.add(closestgoal)
 
-        soma = sum([idx[1] for idx in matches])
-        if soma == float('inf'):
-            soma = 0
-        return soma
+        return sum([idx[1] for idx in matches])
 
 
     def actions(self,state):
